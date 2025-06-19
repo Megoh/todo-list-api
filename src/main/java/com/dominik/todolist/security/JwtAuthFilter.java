@@ -6,9 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-// import org.springframework.beans.factory.annotation.Autowired; // Optional on constructor
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.NonNull; // Good practice for parameters that shouldn't be null
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -49,9 +48,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             jwt = authHeader.substring(7);
             try {
                 userEmail = jwtUtil.extractUsername(jwt);
-                log.debug("Extracted userEmail: {} from JWT", userEmail); // Optional debug log
+                log.debug("Extracted userEmail: {} from JWT", userEmail);
             } catch (Exception e) {
-                // JwtUtil already logs specific errors for expired, malformed, signature issues etc.
+                // JwtUtil already logs specific errors for expired, malformed, signature issues, etc.
                 // This catch is more for unexpected issues during extraction itself.
                 log.warn("Could not extract username from JWT or token is invalid early: {}", e.getMessage());
             }
@@ -62,7 +61,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail); // Can throw UsernameNotFoundException
 
             if (jwtUtil.isTokenValid(jwt, userDetails)) {
-                log.info("JWT Token is valid for user {}. Setting authentication context.", userEmail); // <<< CONFIRMATION LOG
+                log.info("JWT Token is valid for user {}. Setting authentication context.", userEmail);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -74,7 +73,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 log.warn("JWT token validation failed for user {}.", userEmail);
             }
         } else if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ") && !StringUtils.hasText(userEmail)) {
-            // This case means token was present but username extraction failed (e.g. token was invalid/expired)
+            // This case means token was present but username extraction failed (e.g., token was invalid/expired)
             // JwtUtil's extractAllClaims would have logged the specific reason.
             log.debug("JWT was present but userEmail could not be extracted or was invalid.");
         }

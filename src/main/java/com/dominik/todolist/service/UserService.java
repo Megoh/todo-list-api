@@ -17,7 +17,6 @@ import java.util.ArrayList;
 
 @Service
 public class UserService implements UserDetailsService {
-
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -29,14 +28,15 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public AppUser registerUser(RegisterRequest registerRequest) {
-        if (appUserRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new EmailAlreadyExistsException("Error: Email '" + registerRequest.getEmail() + "' is already taken!");
+        if (appUserRepository.existsByEmail(registerRequest.email())) {
+            throw new EmailAlreadyExistsException("Error: Email '" + registerRequest.email() + "' is already taken!");
         }
 
+        // TODO: @Builder pattern?
         AppUser newAppUser = new AppUser();
-        newAppUser.setName(registerRequest.getName());
-        newAppUser.setEmail(registerRequest.getEmail());
-        newAppUser.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        newAppUser.setName(registerRequest.name());
+        newAppUser.setEmail(registerRequest.email());
+        newAppUser.setPassword(passwordEncoder.encode(registerRequest.password()));
 
         return appUserRepository.save(newAppUser);
     }
@@ -44,7 +44,7 @@ public class UserService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        AppUser appUser = appUserRepository.findByEmail(email)
+        final var appUser = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         return new User(

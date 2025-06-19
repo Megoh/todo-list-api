@@ -27,8 +27,3 @@ gradle-app.setting
 *.class
 /gradlew
 /gradlew.bat
-
-# Diagram
-TaskTracker.drawio
-
-.$CommandsAndStatuses.drawio.bkp

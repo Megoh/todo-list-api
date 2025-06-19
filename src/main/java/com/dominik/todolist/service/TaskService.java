@@ -31,22 +31,22 @@ public class TaskService {
      * Creates a new task for the given user.
      *
      * @param taskRequest DTO containing title and description
-     * @param userEmail Email of the user creating the task
+     * @param userEmail   Email of the user creating the task
      * @return The created TaskResponse
      * @throws UserNotFoundException if the user does not exist
      */
+    @Transactional
     public TaskResponse createTask(TaskRequest taskRequest, String userEmail) {
-        AppUser appUser = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
+        final var appUser = findUserByEmail(userEmail);
 
-        Task task = new Task();
-        task.setTitle(taskRequest.title());
-        task.setDescription(taskRequest.description());
-        task.setStatus(TaskStatus.IN_PROGRESS);
-        task.setAppUser(appUser);
-
-        Task savedTask = taskRepository.save(task);
-        return mapToTaskResponse(savedTask);
+        return mapToTaskResponse(taskRepository.save(
+                Task.builder()
+                        .title(taskRequest.title())
+                        .description(taskRequest.description())
+                        .status(TaskStatus.TO_DO)
+                        .appUser(appUser)
+                        .build()
+        ));
     }
 
     /**
@@ -58,8 +58,7 @@ public class TaskService {
      */
     @Transactional(readOnly = true)
     public List<TaskResponse> getAllTasksForAppUser(String userEmail) {
-        AppUser appUser = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
+        final var appUser = findUserByEmail(userEmail);
 
         return taskRepository.findByAppUserId(appUser.getId())
                 .stream()
@@ -82,46 +81,51 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public TaskResponse getTaskByIdAndAppUser(Long taskId, String userEmail) {
-        AppUser appUser = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + taskId));
-
-        if (!task.getAppUser().getId().equals(appUser.getId())) {
-            throw new TaskNotFoundException("Task not found for this user (or access denied)");
-        }
+        final var task = getAndVerifyTaskOwner(taskId, userEmail);
         return mapToTaskResponse(task);
     }
 
+    @Transactional
     public TaskResponse updateTask(Long taskId, TaskRequest taskRequest, String userEmail) {
-        AppUser appUser = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + taskId));
+        final var task = getAndVerifyTaskOwner(taskId, userEmail);
 
-        if (!task.getAppUser().getId().equals(appUser.getId())) {
-            throw new TaskNotFoundException("Task not found for this user (or access denied)");
+        if (taskRequest.title() != null && !taskRequest.title().isBlank()) {
+            task.setTitle(taskRequest.title());
         }
 
-        task.setTitle(taskRequest.title());
-        task.setDescription(taskRequest.description());
+        if (taskRequest.description() != null && !taskRequest.description().isBlank()) {
+            task.setDescription(taskRequest.description());
+        }
+
         if (taskRequest.status() != null) {
             task.setStatus(taskRequest.status());
         }
-        Task updatedTask = taskRepository.save(task);
-        return mapToTaskResponse(updatedTask);
+
+        return mapToTaskResponse(task);
     }
 
+    @Transactional
     public void deleteTask(Long taskId, String userEmail) {
-        AppUser appUser = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + userEmail));
-        Task task = taskRepository.findById(taskId)
+        final var task = getAndVerifyTaskOwner(taskId, userEmail);
+        taskRepository.delete(task);
+    }
+
+    private Task getAndVerifyTaskOwner(Long taskId, String userEmail) {
+        final var user = findUserByEmail(userEmail);
+
+        final var task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + taskId));
 
-        if (!task.getAppUser().getId().equals(appUser.getId())) {
-            throw new TaskNotFoundException("Task not found for this user (or access denied)");
+        if (!task.getAppUser().getId().equals(user.getId())) {
+            // We throw TaskNotFoundException to avoid revealing that the task exists but belongs to someone else.
+            throw new TaskNotFoundException("Task not found with id: " + taskId);
         }
 
-        taskRepository.deleteById(taskId);
+        return task;
+    }
+
+    private AppUser findUserByEmail(String email) {
+        return appUserRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
     }
 }

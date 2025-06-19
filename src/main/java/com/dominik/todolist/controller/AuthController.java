@@ -3,12 +3,9 @@ package com.dominik.todolist.controller;
 import com.dominik.todolist.dto.AuthResponse;
 import com.dominik.todolist.dto.LoginRequest;
 import com.dominik.todolist.dto.RegisterRequest;
-import com.dominik.todolist.exception.EmailAlreadyExistsException;
-import com.dominik.todolist.model.AppUser;
 import com.dominik.todolist.security.JwtUtil;
 import com.dominik.todolist.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,7 +26,6 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    @Autowired
     public AuthController(UserService userService,
                           AuthenticationManager authenticationManager,
                           JwtUtil jwtUtil) {
@@ -42,7 +38,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         userService.registerUser(registerRequest);
 
-        final UserDetails userDetails = userService.loadUserByUsername(registerRequest.getEmail());
+        final UserDetails userDetails = userService.loadUserByUsername(registerRequest.email());
         final String jwt = jwtUtil.generateToken(userDetails);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(jwt));
@@ -53,8 +49,8 @@ public class AuthController {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
+                            loginRequest.email(),
+                            loginRequest.password()
                     )
             );
 

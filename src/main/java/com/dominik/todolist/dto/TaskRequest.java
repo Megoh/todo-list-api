@@ -17,4 +17,5 @@ public record TaskRequest(
 
         TaskStatus status
 ) {
+
 }
