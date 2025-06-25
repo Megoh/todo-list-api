@@ -1,5 +1,6 @@
 package com.dominik.todolist.service;
 
+import com.dominik.todolist.dto.CreateTaskRequest;
 import com.dominik.todolist.dto.TaskRequest;
 import com.dominik.todolist.dto.TaskResponse;
 import com.dominik.todolist.exception.TaskNotFoundException;
@@ -9,11 +10,11 @@ import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.repository.TaskRepository;
 import com.dominik.todolist.repository.AppUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 
 @Service
 @Transactional
@@ -21,22 +22,22 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final AppUserRepository appUserRepository;
 
-    @Autowired
     public TaskService(TaskRepository taskRepository, AppUserRepository appUserRepository) {
         this.taskRepository = taskRepository;
         this.appUserRepository = appUserRepository;
     }
 
     /**
-     * Creates a new task for the given user.
+     * Creates a new task for the given user. The task is always created with an
+     * initial status of 'TO_DO', regardless of the status provided in the request.
      *
-     * @param taskRequest DTO containing title and description
-     * @param userEmail   Email of the user creating the task
-     * @return The created TaskResponse
-     * @throws UserNotFoundException if the user does not exist
+     * @param taskRequest DTO containing the new task's details (title, description, status).
+     * @param userEmail   Email of the user for whom the task is being created.
+     * @return A TaskResponse DTO representing the newly created task.
+     * @throws UserNotFoundException if a user with the given email does not exist.
      */
     @Transactional
-    public TaskResponse createTask(TaskRequest taskRequest, String userEmail) {
+    public TaskResponse createTask(CreateTaskRequest taskRequest, String userEmail) {
         final var appUser = findUserByEmail(userEmail);
 
         return mapToTaskResponse(taskRepository.save(
@@ -60,7 +61,7 @@ public class TaskService {
     public List<TaskResponse> getAllTasksForAppUser(String userEmail) {
         final var appUser = findUserByEmail(userEmail);
 
-        return taskRepository.findByAppUserId(appUser.getId())
+        return taskRepository.findByAppUser_Id(appUser.getId())
                 .stream()
                 .map(this::mapToTaskResponse)
                 .toList();
@@ -114,11 +115,11 @@ public class TaskService {
         final var user = findUserByEmail(userEmail);
 
         final var task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + taskId));
+                .orElseThrow(() -> TaskNotFoundException.withId(taskId));
 
         if (!task.getAppUser().getId().equals(user.getId())) {
             // We throw TaskNotFoundException to avoid revealing that the task exists but belongs to someone else.
-            throw new TaskNotFoundException("Task not found with id: " + taskId);
+            throw TaskNotFoundException.withId(taskId);
         }
 
         return task;
@@ -126,6 +127,6 @@ public class TaskService {
 
     private AppUser findUserByEmail(String email) {
         return appUserRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> UserNotFoundException.withEmail(email));
     }
 }

@@ -20,7 +20,6 @@ public class UserService implements UserDetailsService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Autowired
     public UserService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
@@ -32,13 +31,13 @@ public class UserService implements UserDetailsService {
             throw new EmailAlreadyExistsException("Error: Email '" + registerRequest.email() + "' is already taken!");
         }
 
-        // TODO: @Builder pattern?
-        AppUser newAppUser = new AppUser();
-        newAppUser.setName(registerRequest.name());
-        newAppUser.setEmail(registerRequest.email());
-        newAppUser.setPassword(passwordEncoder.encode(registerRequest.password()));
-
-        return appUserRepository.save(newAppUser);
+        return appUserRepository.save(
+                AppUser.builder()
+                        .name(registerRequest.name())
+                        .email(registerRequest.email())
+                        .password(passwordEncoder.encode(registerRequest.password()))
+                        .build()
+        );
     }
 
     @Override

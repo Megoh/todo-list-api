@@ -1,23 +1,22 @@
 package com.dominik.todolist.model;
 
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @ToString(exclude = {"password", "tasks"})
 public class AppUser {
     @Id
@@ -36,7 +35,6 @@ public class AppUser {
     private String email;
 
     @NotBlank(message = "Password cannot be blank")
-    // No size validation here, as the hashed password will be longer
     @Column(nullable = false)
     private String password;
 

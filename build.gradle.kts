@@ -25,6 +25,7 @@ dependencies {
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("com.h2database:h2")
     testImplementation("org.testcontainers:postgresql:1.20.6")
     mockitoAgent("org.mockito:mockito-core") { isTransitive = false }
