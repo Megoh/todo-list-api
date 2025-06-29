@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    container_name: todolist-api-compose
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/api_task_tracker
+      - DB_PASSWORD=
+      - JWT_SECRET=
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: todolist-db-compose
+    environment:
+      - POSTGRES_USER=
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=api_task_tracker
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
