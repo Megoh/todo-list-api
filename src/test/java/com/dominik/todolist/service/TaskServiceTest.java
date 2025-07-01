@@ -6,8 +6,8 @@ import com.dominik.todolist.exception.TaskNotFoundException;
 import com.dominik.todolist.model.AppUser;
 import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
-import com.dominik.todolist.repository.AppUserRepository;
 import com.dominik.todolist.repository.TaskRepository;
+import com.dominik.todolist.service.auth.AuthenticatedUserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,11 +24,16 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TaskServiceTest {
+    private static final String TEST_USER_EMAIL = "test.user@example.com";
+    private static final Long TEST_USER_ID = 1L;
+    private static final TaskStatus TEST_TASK_STATUS = TaskStatus.TO_DO;
+    private static final Long TEST_TASK_ID = 1L;
+
     @Mock
     private TaskRepository taskRepository;
 
     @Mock
-    private AppUserRepository appUserRepository;
+    private AuthenticatedUserService authenticatedUserService;
 
     @InjectMocks
     private TaskService taskService;
@@ -36,23 +41,24 @@ public class TaskServiceTest {
     @Test
     @DisplayName("createTask - should create and save a new task")
     void createTask_shouldCreateAndSaveNewTask() {
-        final var userEmail = "test.user@example.com";
+        final var userEmail = TEST_USER_EMAIL;
         final var request = new CreateTaskRequest("New Task", "Description");
 
         final var mockUser = AppUser.builder()
-                .id(1L)
+                .id(TEST_USER_ID)
                 .email(userEmail)
                 .name("Test User")
                 .build();
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
+
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> {
             final var taskToSave = invocation.getArgument(0, Task.class);
             taskToSave.setId(99L);
             return taskToSave;
         });
 
-        final var result = taskService.createTask(request, userEmail);
+        final var result = taskService.createTask(request);
 
         assertNotNull(result);
         assertEquals("New Task", result.title());
@@ -64,11 +70,11 @@ public class TaskServiceTest {
     }
 
     @Test
-    @DisplayName("getAllTasksForAppUser - should return all tasks for a given user")
-    void getAllTasksForAppUser_shouldReturnAllTasks() {
-        final var userEmail = "test.user@example.com";
+    @DisplayName("getAllTasksForCurrentUser - should return all tasks for current user")
+    void getAllTasksForCurrentUser_shouldReturnAllTasks() {
+        final var userEmail = TEST_USER_EMAIL;
         final var mockUser = AppUser.builder()
-                .id(1L)
+                .id(TEST_USER_ID)
                 .email(userEmail)
                 .name("Test User")
                 .build();
@@ -86,47 +92,46 @@ public class TaskServiceTest {
                         .build()
         );
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
+
         when(taskRepository.findByAppUser_Id(mockUser.getId())).thenReturn(mockTasks);
 
-        final var results = taskService.getAllTasksForAppUser(userEmail);
+        final var results = taskService.getAllTasksForCurrentUser();
 
         assertEquals(2, results.size());
         assertEquals("Task 1", results.get(0).title());
         assertEquals(102L, results.get(1).id());
 
-        verify(appUserRepository).findByEmail(userEmail);
+        verify(authenticatedUserService).getAuthenticatedUser();
         verify(taskRepository).findByAppUser_Id(mockUser.getId());
     }
 
     @Test
     @DisplayName("getTaskByIdAndAppUser - should throw exception when task not found")
     void getTaskByIdAndAppUser_shouldThrowException_whenTaskNotFound() {
-        final var userEmail = "test.user@example.com";
+        final var userEmail = TEST_USER_EMAIL;
         final var nonExistentTaskId = 123L;
         final var mockUser = AppUser.builder()
-                .id(1L)
+                .id(TEST_USER_ID)
                 .email(userEmail)
                 .build();
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
         when(taskRepository.findById(nonExistentTaskId)).thenReturn(Optional.empty());
 
-        assertThrows(TaskNotFoundException.class, () -> {
-            taskService.getTaskByIdAndAppUser(nonExistentTaskId, userEmail);
-        });
+        assertThrows(TaskNotFoundException.class, () -> taskService.getTaskByIdAndAppUser(nonExistentTaskId));
 
-        verify(appUserRepository).findByEmail(userEmail);
         verify(taskRepository).findById(nonExistentTaskId);
+        verify(authenticatedUserService).getAuthenticatedUser();
     }
 
     @Test
     @DisplayName("getTaskByIdAndAppUser - should return task when found and owned by user")
     void getTaskByIdAndAppUser_shouldReturnTask_whenFoundAndOwnedByUser() {
-        final var userEmail = "test.user@example.com";
-        final var taskId = 1L;
+        final var userEmail = TEST_USER_EMAIL;
+        final var taskId = TEST_TASK_ID;
         final var mockUser = AppUser.builder()
-                .id(1L)
+                .id(TEST_USER_ID)
                 .email(userEmail)
                 .build();
         final var mockTask = Task.builder()
@@ -135,15 +140,15 @@ public class TaskServiceTest {
                 .appUser(mockUser)
                 .build();
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(mockTask));
 
-        final var result = taskService.getTaskByIdAndAppUser(taskId, userEmail);
+        final var result = taskService.getTaskByIdAndAppUser(taskId);
 
         assertNotNull(result);
         assertEquals("My Task", result.title());
         assertEquals(userEmail, result.userEmail());
-        verify(taskRepository, times(1)).findById(taskId);
+        verify(taskRepository).findById(taskId);
     }
 
     @Test
@@ -152,7 +157,7 @@ public class TaskServiceTest {
         final var userEmail = "user.a@example.com";
         final var taskId = 2L;
         final var userA = AppUser.builder()
-                .id(1L)
+                .id(TEST_USER_ID)
                 .email(userEmail)
                 .build();
         final var userB = AppUser.builder()
@@ -165,22 +170,25 @@ public class TaskServiceTest {
                 .appUser(userB)
                 .build();
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(userA));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(userA);
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskOfUserB));
 
-        assertThrows(TaskNotFoundException.class, () -> {
-            taskService.getTaskByIdAndAppUser(taskId, userEmail);
-        }, "Should throw TaskNotFoundException to prevent information leakage");
+        assertThrows(TaskNotFoundException.class, () ->
+                        taskService.getTaskByIdAndAppUser(taskId),
+                "Should throw TaskNotFoundException to prevent information leakage");
 
-        verify(taskRepository, times(1)).findById(taskId);
+        verify(taskRepository).findById(taskId);
     }
 
     @Test
     @DisplayName("updateTask - should update task fields without an explicit save call")
     void updateTask_shouldUpdateTaskFields() {
-        final var userEmail = "test.user@example.com";
-        final var taskId = 1L;
-        final var mockUser = AppUser.builder().id(1L).email(userEmail).build();
+        final var userEmail = TEST_USER_EMAIL;
+        final var taskId = TEST_TASK_ID;
+        final var mockUser = AppUser.builder()
+                .id(TEST_USER_ID)
+                .email(userEmail)
+                .build();
         final var existingTask = Task.builder()
                 .id(taskId)
                 .title("Old Title")
@@ -191,33 +199,36 @@ public class TaskServiceTest {
 
         final var updateRequest = new TaskRequest("New Title", "New Description", TaskStatus.DONE);
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(existingTask));
 
-        final var result = taskService.updateTask(taskId, updateRequest, userEmail);
+        final var result = taskService.updateTask(taskId, updateRequest);
 
         assertNotNull(result);
         assertEquals("New Title", result.title());
         assertEquals("New Description", result.description());
         assertEquals(TaskStatus.DONE, result.status());
 
-        verify(taskRepository, times(1)).findById(taskId);
+        verify(taskRepository).findById(taskId);
         verify(taskRepository, never()).save(any(Task.class));
     }
 
     @Test
     @DisplayName("deleteTask - should call delete on the repository")
     void deleteTask_shouldCallDelete() {
-        final var userEmail = "test.user@example.com";
-        final var taskId = 1L;
-        final var mockUser = AppUser.builder().id(1L).email(userEmail).build();
+        final var userEmail = TEST_USER_EMAIL;
+        final var taskId = TEST_TASK_ID;
+        final var mockUser = AppUser.builder()
+                .id(TEST_USER_ID)
+                .email(userEmail)
+                .build();
         final var existingTask = Task.builder().id(taskId).appUser(mockUser).build();
 
-        when(appUserRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(existingTask));
 
-        assertDoesNotThrow(() -> taskService.deleteTask(taskId, userEmail));
+        assertDoesNotThrow(() -> taskService.deleteTask(taskId));
 
-        verify(taskRepository, times(1)).delete(existingTask);
+        verify(taskRepository).delete(existingTask);
     }
 }

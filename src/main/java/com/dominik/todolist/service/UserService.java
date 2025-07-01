@@ -4,7 +4,6 @@ import com.dominik.todolist.dto.RegisterRequest;
 import com.dominik.todolist.exception.EmailAlreadyExistsException;
 import com.dominik.todolist.model.AppUser;
 import com.dominik.todolist.repository.AppUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

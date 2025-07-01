@@ -5,11 +5,10 @@ import com.dominik.todolist.dto.TaskRequest;
 import com.dominik.todolist.dto.TaskResponse;
 import com.dominik.todolist.exception.TaskNotFoundException;
 import com.dominik.todolist.exception.UserNotFoundException;
-import com.dominik.todolist.model.AppUser;
 import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.repository.TaskRepository;
-import com.dominik.todolist.repository.AppUserRepository;
+import com.dominik.todolist.service.auth.AuthenticatedUserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +19,11 @@ import java.util.List;
 @Transactional
 public class TaskService {
     private final TaskRepository taskRepository;
-    private final AppUserRepository appUserRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public TaskService(TaskRepository taskRepository, AppUserRepository appUserRepository) {
+    public TaskService(TaskRepository taskRepository, AuthenticatedUserService authenticatedUserService) {
         this.taskRepository = taskRepository;
-        this.appUserRepository = appUserRepository;
+        this.authenticatedUserService = authenticatedUserService;
     }
 
     /**
@@ -32,13 +31,12 @@ public class TaskService {
      * initial status of 'TO_DO', regardless of the status provided in the request.
      *
      * @param taskRequest DTO containing the new task's details (title, description, status).
-     * @param userEmail   Email of the user for whom the task is being created.
      * @return A TaskResponse DTO representing the newly created task.
      * @throws UserNotFoundException if a user with the given email does not exist.
      */
     @Transactional
-    public TaskResponse createTask(CreateTaskRequest taskRequest, String userEmail) {
-        final var appUser = findUserByEmail(userEmail);
+    public TaskResponse createTask(CreateTaskRequest taskRequest) {
+        final var appUser = authenticatedUserService.getAuthenticatedUser();
 
         return mapToTaskResponse(taskRepository.save(
                 Task.builder()
@@ -50,16 +48,9 @@ public class TaskService {
         ));
     }
 
-    /**
-     * Retrieves all tasks for a specific user.
-     *
-     * @param userEmail Email of the user
-     * @return List of TaskResponse objects
-     * @throws UserNotFoundException if the user does not exist
-     */
     @Transactional(readOnly = true)
-    public List<TaskResponse> getAllTasksForAppUser(String userEmail) {
-        final var appUser = findUserByEmail(userEmail);
+    public List<TaskResponse> getAllTasksForCurrentUser() {
+        final var appUser = authenticatedUserService.getAuthenticatedUser();
 
         return taskRepository.findByAppUser_Id(appUser.getId())
                 .stream()
@@ -81,14 +72,14 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    public TaskResponse getTaskByIdAndAppUser(Long taskId, String userEmail) {
-        final var task = getAndVerifyTaskOwner(taskId, userEmail);
+    public TaskResponse getTaskByIdAndAppUser(Long taskId) {
+        final var task = getAndVerifyTaskOwner(taskId);
         return mapToTaskResponse(task);
     }
 
     @Transactional
-    public TaskResponse updateTask(Long taskId, TaskRequest taskRequest, String userEmail) {
-        final var task = getAndVerifyTaskOwner(taskId, userEmail);
+    public TaskResponse updateTask(Long taskId, TaskRequest taskRequest) {
+        final var task = getAndVerifyTaskOwner(taskId);
 
         if (taskRequest.title() != null && !taskRequest.title().isBlank()) {
             task.setTitle(taskRequest.title());
@@ -106,13 +97,13 @@ public class TaskService {
     }
 
     @Transactional
-    public void deleteTask(Long taskId, String userEmail) {
-        final var task = getAndVerifyTaskOwner(taskId, userEmail);
+    public void deleteTask(Long taskId) {
+        final var task = getAndVerifyTaskOwner(taskId);
         taskRepository.delete(task);
     }
 
-    private Task getAndVerifyTaskOwner(Long taskId, String userEmail) {
-        final var user = findUserByEmail(userEmail);
+    private Task getAndVerifyTaskOwner(Long taskId) {
+        final var user = authenticatedUserService.getAuthenticatedUser();
 
         final var task = taskRepository.findById(taskId)
                 .orElseThrow(() -> TaskNotFoundException.withId(taskId));
@@ -123,10 +114,5 @@ public class TaskService {
         }
 
         return task;
-    }
-
-    private AppUser findUserByEmail(String email) {
-        return appUserRepository.findByEmail(email)
-                .orElseThrow(() -> UserNotFoundException.withEmail(email));
     }
 }

@@ -7,8 +7,6 @@ import com.dominik.todolist.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,19 +23,19 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody CreateTaskRequest taskRequest) {
-        TaskResponse createdTaskResponse = taskService.createTask(taskRequest, getCurrentUserEmail());
+        TaskResponse createdTaskResponse = taskService.createTask(taskRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTaskResponse);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long id) {
-        TaskResponse taskResponse = taskService.getTaskByIdAndAppUser(id, getCurrentUserEmail());
+        TaskResponse taskResponse = taskService.getTaskByIdAndAppUser(id);
         return ResponseEntity.ok(taskResponse);
     }
 
     @GetMapping
     public ResponseEntity<List<TaskResponse>> getAllTasksForCurrentAppUser() {
-        List<TaskResponse> tasksResponse = taskService.getAllTasksForAppUser(getCurrentUserEmail());
+        List<TaskResponse> tasksResponse = taskService.getAllTasksForCurrentUser();
         return ResponseEntity.ok(tasksResponse);
     }
 
@@ -45,27 +43,13 @@ public class TaskController {
     public ResponseEntity<TaskResponse> updateTask(
             @PathVariable("id") Long id,
             @Valid @RequestBody TaskRequest taskRequest) {
-        TaskResponse updatedTaskResponse = taskService.updateTask(id, taskRequest, getCurrentUserEmail());
+        TaskResponse updatedTaskResponse = taskService.updateTask(id, taskRequest);
         return ResponseEntity.ok(updatedTaskResponse);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable("id") Long id) {
-        taskService.deleteTask(id, getCurrentUserEmail());
+        taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Helper method to get the email of the currently authenticated user.
-     *
-     * @return The email (username) of the authenticated user.
-     */
-    private String getCurrentUserEmail() {
-        final var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // It's safe to cast as our JwtAuthFilter and UserDetailsService ensure it's a UserDetails object
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-        return userDetails.getUsername();
     }
 }

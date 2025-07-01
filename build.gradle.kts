@@ -4,7 +4,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 }
 
-val mockitoAgent by configurations.creating
+val mockitoAgent: Configuration by configurations.creating
 
 repositories {
     mavenCentral()
@@ -34,6 +34,9 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    // Security fix: Override vulnerable Apache Commons Compress version
+    implementation("org.apache.commons:commons-compress:1.26.0")
 }
 
 tasks.withType<Test> {
