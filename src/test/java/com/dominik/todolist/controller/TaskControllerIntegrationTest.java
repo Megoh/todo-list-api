@@ -228,9 +228,9 @@ public class TaskControllerIntegrationTest {
         mockMvc.perform(get("/api/tasks")
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].title", is("Task A1")))
-                .andExpect(jsonPath("$[1].title", is("Task A2")));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].title", is("Task A2")))
+                .andExpect(jsonPath("$.content[1].title", is("Task A1")));
     }
 
     @Test
@@ -287,5 +287,32 @@ public class TaskControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.title", is("Title cannot be blank")));
+    }
+
+    @Test
+    @DisplayName("GET /api/tasks - With Pagination")
+    @WithMockUser("user@example.com")
+    void whenGetTasksWithPagination_thenReturnsPagedResult() throws Exception {
+        AppUser user = appUserRepository.save(
+                AppUser.builder()
+                        .email("user@example.com")
+                        .name("Test User")
+                        .password(passwordEncoder.encode("password"))
+                        .build()
+        );
+
+        for (int i = 0; i < 15; i++) {
+            taskRepository.save(Task.builder().title("Task " + i).description("...").status(TaskStatus.TO_DO).appUser(user).build());
+        }
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(5)))
+                .andExpect(jsonPath("$.totalPages", is(3)))
+                .andExpect(jsonPath("$.totalElements", is(15)))
+                .andExpect(jsonPath("$.number", is(1)));
     }
 }

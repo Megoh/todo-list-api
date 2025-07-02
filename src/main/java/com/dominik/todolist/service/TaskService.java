@@ -9,11 +9,10 @@ import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.repository.TaskRepository;
 import com.dominik.todolist.service.auth.AuthenticatedUserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-
 
 @Service
 @Transactional
@@ -48,14 +47,27 @@ public class TaskService {
         ));
     }
 
-    @Transactional(readOnly = true)
-    public List<TaskResponse> getAllTasksForCurrentUser() {
-        final var appUser = authenticatedUserService.getAuthenticatedUser();
+    public Page<TaskResponse> getAllTasksForCurrentUser(Pageable pageable) {
+        Long currentUserId = authenticatedUserService.getAuthenticatedUser().getId();
+        Page<Task> taskPage = taskRepository.findByAppUser_Id(currentUserId, pageable);
 
-        return taskRepository.findByAppUser_Id(appUser.getId())
-                .stream()
-                .map(this::mapToTaskResponse)
-                .toList();
+        return taskPage.map(this::mapToTaskResponse);
+    }
+
+    public Page<TaskResponse> getAllTasks(Pageable pageable) {
+        Page<Task> taskPage = taskRepository.findAll(pageable);
+        return taskPage.map(this::convertToTaskResponse);
+    }
+
+    private TaskResponse convertToTaskResponse(Task task) {
+        return TaskResponse.builder()
+                .id(task.getId())
+                .title(task.getTitle())
+                .description(task.getDescription())
+                .status(task.getStatus())
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .build();
     }
 
     private TaskResponse mapToTaskResponse(Task task) {

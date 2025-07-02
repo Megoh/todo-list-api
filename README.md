@@ -161,35 +161,57 @@ Base Path: /api/tasks
 }
 ```
 
-### 2. Get All Tasks
-- **Endpoint:** GET /api/tasks
-- **Description:** Retrieves all tasks for the authenticated user.
-- **Success Response (200 OK):**
+### 2. Get All Tasks (Paginated)
 
-```json
-[
-  {
-    "id": 1,
-    "title": "Implement README",
-    "description": "Write a comprehensive README for the project.",
-    "status": "IN_PROGRESS",
-    "createdAt": "2023-10-27T10:00:00.000000",
-    "updatedAt": "2023-10-27T10:00:00.000000",
-    "userId": 123,
-    "userEmail": "john.doe@example.com"
-  },
-  {
-    "id": 2,
-    "title": "Write integration tests",
-    "description": "Add tests for the AuthController.",
-    "status": "TODO",
-    "createdAt": "2023-10-27T11:00:00.000000",
-    "updatedAt": "2023-10-27T11:00:00.000000",
-    "userId": 123,
-    "userEmail": "john.doe@example.com"
-  }
-]
-```
+*   **Endpoint**: `GET /api/tasks`
+*   **Description**: Retrieves a paginated list of tasks belonging to the authenticated user.
+*   **Query Parameters**:
+  *   `page`: The page number to retrieve (0-indexed).
+  *   `size`: The number of items per page.
+  *   `sort`: A property to sort by, followed by direction (e.g., `createdAt,desc`).
+*   **Defaults**: If no parameters are provided, the API defaults to `page=0`, `size=10`, and sorts by `createdAt` descending.
+*   **Success Response (200 OK)**:
+    ```json
+    {
+        "content": [
+            {
+                "id": 1,
+                "title": "Implement README",
+                "description": "Write a comprehensive README for the project.",
+                "status": "IN_PROGRESS",
+                "createdAt": "2023-10-27T10:00:00.000000",
+                "updatedAt": "2023-10-27T10:00:00.000000",
+                "userId": 123,
+                "userEmail": "john.doe@example.com"
+            }
+        ],
+        "pageable": {
+            "pageNumber": 0,
+            "pageSize": 10,
+            "sort": {
+                "sorted": true,
+                "unsorted": false,
+                "empty": false
+            },
+            "offset": 0,
+            "paged": true,
+            "unpaged": false
+        },
+        "last": true,
+        "totalPages": 1,
+        "totalElements": 1,
+        "size": 10,
+        "number": 0,
+        "sort": {
+            "sorted": true,
+            "unsorted": false,
+            "empty": false
+        },
+        "first": true,
+        "numberOfElements": 1,
+        "empty": false
+    }
+    ```
 
 ### 3. Update a Task
 - **Endpoint:** PUT /api/tasks/{id}

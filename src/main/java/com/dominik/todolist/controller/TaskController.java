@@ -5,11 +5,13 @@ import com.dominik.todolist.dto.TaskRequest;
 import com.dominik.todolist.dto.TaskResponse;
 import com.dominik.todolist.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -27,16 +29,18 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTaskResponse);
     }
 
+    @GetMapping
+    public ResponseEntity<Page<TaskResponse>> getCurrentUserTasks(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Page<TaskResponse> tasks = taskService.getAllTasksForCurrentUser(pageable);
+        return ResponseEntity.ok(tasks);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long id) {
         TaskResponse taskResponse = taskService.getTaskByIdAndAppUser(id);
         return ResponseEntity.ok(taskResponse);
-    }
-
-    @GetMapping
-    public ResponseEntity<List<TaskResponse>> getAllTasksForCurrentAppUser() {
-        List<TaskResponse> tasksResponse = taskService.getAllTasksForCurrentUser();
-        return ResponseEntity.ok(tasksResponse);
     }
 
     @PutMapping("/{id}")

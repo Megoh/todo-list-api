@@ -1,10 +1,11 @@
 package com.dominik.todolist.dto;
 
 import com.dominik.todolist.model.TaskStatus;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
-
+@Builder
 public record TaskResponse(
         Long id,
         String title,

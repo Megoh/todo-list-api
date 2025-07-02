@@ -14,6 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +29,6 @@ import static org.mockito.Mockito.*;
 public class TaskServiceTest {
     private static final String TEST_USER_EMAIL = "test.user@example.com";
     private static final Long TEST_USER_ID = 1L;
-    private static final TaskStatus TEST_TASK_STATUS = TaskStatus.TO_DO;
     private static final Long TEST_TASK_ID = 1L;
 
     @Mock
@@ -70,13 +72,11 @@ public class TaskServiceTest {
     }
 
     @Test
-    @DisplayName("getAllTasksForCurrentUser - should return all tasks for current user")
+    @DisplayName("Get All Tasks For Current User - Should Return All Tasks")
     void getAllTasksForCurrentUser_shouldReturnAllTasks() {
-        final var userEmail = TEST_USER_EMAIL;
         final var mockUser = AppUser.builder()
                 .id(TEST_USER_ID)
-                .email(userEmail)
-                .name("Test User")
+                .email(TEST_USER_EMAIL)
                 .build();
 
         final var mockTasks = List.of(
@@ -92,28 +92,30 @@ public class TaskServiceTest {
                         .build()
         );
 
+        Page<Task> mockPage = new PageImpl<>(mockTasks);
+        Pageable pageable = Pageable.unpaged();
+
         when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
 
-        when(taskRepository.findByAppUser_Id(mockUser.getId())).thenReturn(mockTasks);
+        when(taskRepository.findByAppUser_Id(eq(mockUser.getId()), any(Pageable.class))).thenReturn(mockPage);
 
-        final var results = taskService.getAllTasksForCurrentUser();
+        final var results = taskService.getAllTasksForCurrentUser(pageable);
 
-        assertEquals(2, results.size());
-        assertEquals("Task 1", results.get(0).title());
-        assertEquals(102L, results.get(1).id());
+        assertEquals(2, results.getContent().size());
+        assertEquals("Task 1", results.getContent().get(0).title());
+        assertEquals(102L, results.getContent().get(1).id());
 
         verify(authenticatedUserService).getAuthenticatedUser();
-        verify(taskRepository).findByAppUser_Id(mockUser.getId());
+        verify(taskRepository).findByAppUser_Id(mockUser.getId(), pageable);
     }
 
     @Test
     @DisplayName("getTaskByIdAndAppUser - should throw exception when task not found")
     void getTaskByIdAndAppUser_shouldThrowException_whenTaskNotFound() {
-        final var userEmail = TEST_USER_EMAIL;
         final var nonExistentTaskId = 123L;
         final var mockUser = AppUser.builder()
                 .id(TEST_USER_ID)
-                .email(userEmail)
+                .email(TEST_USER_EMAIL)
                 .build();
 
         when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
@@ -183,11 +185,10 @@ public class TaskServiceTest {
     @Test
     @DisplayName("updateTask - should update task fields without an explicit save call")
     void updateTask_shouldUpdateTaskFields() {
-        final var userEmail = TEST_USER_EMAIL;
         final var taskId = TEST_TASK_ID;
         final var mockUser = AppUser.builder()
                 .id(TEST_USER_ID)
-                .email(userEmail)
+                .email(TEST_USER_EMAIL)
                 .build();
         final var existingTask = Task.builder()
                 .id(taskId)
@@ -216,11 +217,10 @@ public class TaskServiceTest {
     @Test
     @DisplayName("deleteTask - should call delete on the repository")
     void deleteTask_shouldCallDelete() {
-        final var userEmail = TEST_USER_EMAIL;
         final var taskId = TEST_TASK_ID;
         final var mockUser = AppUser.builder()
                 .id(TEST_USER_ID)
-                .email(userEmail)
+                .email(TEST_USER_EMAIL)
                 .build();
         final var existingTask = Task.builder().id(taskId).appUser(mockUser).build();
 
