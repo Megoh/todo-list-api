@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -100,9 +101,9 @@ public class TaskControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/tasks/{id} - Success, Deletes Own Task")
+    @DisplayName("DELETE /api/tasks/{id} - Success, Soft Deletes Own Task")
     @WithMockUser("user.a@example.com")
-    void whenDeleteOwnTask_thenReturns204NoContent() throws Exception {
+    void whenDeleteOwnTask_thenReturns204AndTaskIsSoftDeleted() throws Exception {
         final var taskToDelete = taskRepository.save(
                 Task.builder()
                         .title("Task to be deleted")
@@ -117,7 +118,12 @@ public class TaskControllerIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertFalse(taskRepository.findById(taskToDelete.getId()).isPresent(),
-                "Task should have been deleted from the database");
+                "Task should not be found by standard findById method.");
+
+        final var deletedTask = taskRepository.findByIdEvenIfDeleted(taskToDelete.getId())
+                .orElseThrow(() -> new AssertionError("Task should exist in the database"));
+
+        assertTrue(deletedTask.isDeleted(), "Task's isDeleted flag should be true.");
     }
 
     @Test
