@@ -47,27 +47,10 @@ public class TaskService {
         ));
     }
 
-    public Page<TaskResponse> getAllTasksForCurrentUser(Pageable pageable) {
-        Long currentUserId = authenticatedUserService.getAuthenticatedUser().getId();
-        Page<Task> taskPage = taskRepository.findByAppUser_Id(currentUserId, pageable);
-
+    public Page<TaskResponse> getAllTasksForCurrentUser(TaskStatus status, Pageable pageable) {
+        final var currentUserId = authenticatedUserService.getAuthenticatedUser().getId();
+        Page<Task> taskPage = taskRepository.findByUserIdAndOptionalStatus(currentUserId, status, pageable);
         return taskPage.map(this::mapToTaskResponse);
-    }
-
-    public Page<TaskResponse> getAllTasks(Pageable pageable) {
-        Page<Task> taskPage = taskRepository.findAll(pageable);
-        return taskPage.map(this::convertToTaskResponse);
-    }
-
-    private TaskResponse convertToTaskResponse(Task task) {
-        return TaskResponse.builder()
-                .id(task.getId())
-                .title(task.getTitle())
-                .description(task.getDescription())
-                .status(task.getStatus())
-                .createdAt(task.getCreatedAt())
-                .updatedAt(task.getUpdatedAt())
-                .build();
     }
 
     private TaskResponse mapToTaskResponse(Task task) {

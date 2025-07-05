@@ -3,6 +3,7 @@ package com.dominik.todolist.controller;
 import com.dominik.todolist.dto.CreateTaskRequest;
 import com.dominik.todolist.dto.TaskRequest;
 import com.dominik.todolist.dto.TaskResponse;
+import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -31,9 +32,10 @@ public class TaskController {
 
     @GetMapping
     public ResponseEntity<Page<TaskResponse>> getCurrentUserTasks(
+            @RequestParam(required = false) TaskStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-        Page<TaskResponse> tasks = taskService.getAllTasksForCurrentUser(pageable);
+        Page<TaskResponse> tasks = taskService.getAllTasksForCurrentUser(status, pageable);
         return ResponseEntity.ok(tasks);
     }
 

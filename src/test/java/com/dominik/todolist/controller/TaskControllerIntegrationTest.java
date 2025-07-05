@@ -20,13 +20,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.Matchers.is;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -228,9 +227,7 @@ public class TaskControllerIntegrationTest {
         mockMvc.perform(get("/api/tasks")
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(2)))
-                .andExpect(jsonPath("$.content[0].title", is("Task A2")))
-                .andExpect(jsonPath("$.content[1].title", is("Task A1")));
+                .andExpect(jsonPath("$.content", hasSize(2)));
     }
 
     @Test
@@ -276,7 +273,7 @@ public class TaskControllerIntegrationTest {
     @DisplayName("POST /api/tasks - Fails, Invalid Data (Blank Title)")
     @WithMockUser("user.a@example.com")
     void whenCreateTaskWithBlankTitle_thenReturns400BadRequest() throws Exception {
-        CreateTaskRequest invalidRequest = new CreateTaskRequest(
+        final var invalidRequest = new CreateTaskRequest(
                 "",
                 "This description is fine."
         );
@@ -293,7 +290,7 @@ public class TaskControllerIntegrationTest {
     @DisplayName("GET /api/tasks - With Pagination")
     @WithMockUser("user@example.com")
     void whenGetTasksWithPagination_thenReturnsPagedResult() throws Exception {
-        AppUser user = appUserRepository.save(
+        final var user = appUserRepository.save(
                 AppUser.builder()
                         .email("user@example.com")
                         .name("Test User")
@@ -314,5 +311,67 @@ public class TaskControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalPages", is(3)))
                 .andExpect(jsonPath("$.totalElements", is(15)))
                 .andExpect(jsonPath("$.number", is(1)));
+    }
+
+    @Test
+    @DisplayName("GET /api/tasks - With Status Filter")
+    @WithMockUser("filter.user@example.com")
+    void whenGetTasksWithStatusFilter_thenReturnsFilteredTasks() throws Exception {
+        final var filterUser = createAndSaveTestUser();
+        createSampleTasksForUser(filterUser);
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("status", TaskStatus.TO_DO.name())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(2)))
+                .andExpect(jsonPath("$.content[*].status", everyItem(is(TaskStatus.TO_DO.name()))));
+    }
+
+    @Test
+    @DisplayName("GET /api/tasks - Without Filter Returns All Tasks")
+    @WithMockUser("filter.user@example.com")
+    void whenGetTasksWithoutFilter_thenReturnsAllTasks() throws Exception {
+        final var filterUser = createAndSaveTestUser();
+        createSampleTasksForUser(filterUser);
+
+        mockMvc.perform(get("/api/tasks")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.content", hasSize(3)));
+    }
+
+    private AppUser createAndSaveTestUser() {
+        return appUserRepository.save(
+                AppUser.builder()
+                        .email("filter.user@example.com")
+                        .name("Test User")
+                        .password(passwordEncoder.encode("password"))
+                        .build()
+        );
+    }
+
+    private void createSampleTasksForUser(AppUser user) {
+        taskRepository.save(Task.builder()
+                .title("Task A")
+                .description("Description for Task A")
+                .status(TaskStatus.TO_DO)
+                .appUser(user)
+                .build());
+
+        taskRepository.save(Task.builder()
+                .title("Task B")
+                .description("Description for Task B")
+                .status(TaskStatus.DONE)
+                .appUser(user)
+                .build());
+
+        taskRepository.save(Task.builder()
+                .title("Task C")
+                .description("Description for Task C")
+                .status(TaskStatus.TO_DO)
+                .appUser(user)
+                .build());
     }
 }

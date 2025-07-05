@@ -97,16 +97,16 @@ public class TaskServiceTest {
 
         when(authenticatedUserService.getAuthenticatedUser()).thenReturn(mockUser);
 
-        when(taskRepository.findByAppUser_Id(eq(mockUser.getId()), any(Pageable.class))).thenReturn(mockPage);
+        when(taskRepository.findByUserIdAndOptionalStatus(eq(mockUser.getId()), eq(null), any(Pageable.class))).thenReturn(mockPage);
 
-        final var results = taskService.getAllTasksForCurrentUser(pageable);
+        final var results = taskService.getAllTasksForCurrentUser(null, pageable);
 
         assertEquals(2, results.getContent().size());
         assertEquals("Task 1", results.getContent().get(0).title());
         assertEquals(102L, results.getContent().get(1).id());
 
         verify(authenticatedUserService).getAuthenticatedUser();
-        verify(taskRepository).findByAppUser_Id(mockUser.getId(), pageable);
+        verify(taskRepository).findByUserIdAndOptionalStatus(mockUser.getId(), null, pageable);
     }
 
     @Test
