@@ -10,6 +10,7 @@ functionalities including user registration, JWT-based authentication, and prote
 - **User Authentication**: Secure user registration and login.
 - **JWT-Based Security**: API endpoints protected using JSON Web Tokens.
 - **Task Management**: Full CRUD (Create, Read, Update, Delete) functionality for user-specific tasks.
+- **Soft Deletes & Restore**: Tasks can be soft-deleted and restored, preserving data integrity.
 - **Validation**: Input data validation to ensure data integrity.
 - **Centralized Error Handling**: Consistent, clear error responses.
 
@@ -189,7 +190,7 @@ Base Path: /api/tasks
     * `status`: Filters tasks by their status (e.g., `TO_DO`, `IN_PROGRESS`, `DONE`).
     * `page`: The page number to retrieve (0-indexed).
     * `size`: The number of items per page.
-    * `sort`: A property to sort by, followed by direction (e.g., `createdAt,desc`).
+    * `sort`: A property to sort by, followed by a direction (e.g., `createdAt,desc`).
 * **Defaults**: If no parameters are provided, the API defaults to `page=0`, `size=10`, and sorts by `createdAt`
   descending.
 * **Success Response (200 OK)**:
@@ -253,10 +254,16 @@ Base Path: /api/tasks
 - **Error Response:**
     - 404 Not Found – Task doesn’t exist or isn’t yours.
 
-### 4. Delete a Task
-
-- **Endpoint:** DELETE /api/tasks/{id}
-- **Description:** Deletes a task (only your own).
-- **Success Response:** 204 No Content
-- **Error Response:**
+### 4. Soft-Delete a Task
+- **Endpoint**: DELETE /api/tasks/{id}
+- **Description**: Marks a task as deleted (only your own). The task is not permanently removed and can be restored.
+- **Success Response**: 204 No Content
+- **Error Response**:
     - 404 Not Found – Task doesn’t exist or isn’t yours.
+### 5. Restore a Task
+- **Endpoint**: POST /api/tasks/{id}/restore
+- **Description**: Restores a previously soft-deleted task to an active state.
+- **Request Body**: None.
+- **Success Response (200 OK)**: Returns the restored Task object.
+- **Error Response**:
+    - 404 Not Found – Task doesn’t exist, isn’t yours, or is not in a deleted state.

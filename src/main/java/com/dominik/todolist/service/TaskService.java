@@ -97,14 +97,36 @@ public class TaskService {
         taskRepository.delete(task);
     }
 
+    @Transactional
+    public TaskResponse restoreTask(Long taskId) {
+        final var task = getAndVerifyDeletedTaskOwner(taskId);
+
+        task.setDeleted(false);
+
+        return mapToTaskResponse(task);
+    }
+
+    private Task getAndVerifyDeletedTaskOwner(Long taskId) {
+        final var task = findTaskByIdAndVerifyOwner(taskId, true);
+
+        if (!task.isDeleted()) {
+            throw new IllegalStateException("Task with ID " + taskId + " is not deleted and cannot be restored.");
+        }
+
+        return task;
+    }
+
     private Task getAndVerifyTaskOwner(Long taskId) {
+        return findTaskByIdAndVerifyOwner(taskId, false);
+    }
+
+    private Task findTaskByIdAndVerifyOwner(Long taskId, boolean includeDeleted) {
         final var user = authenticatedUserService.getAuthenticatedUser();
 
-        final var task = taskRepository.findById(taskId)
+        final var task = (includeDeleted ? taskRepository.findByIdEvenIfDeleted(taskId) : taskRepository.findById(taskId))
                 .orElseThrow(() -> TaskNotFoundException.withId(taskId));
 
         if (!task.getAppUser().getId().equals(user.getId())) {
-            // We throw TaskNotFoundException to avoid revealing that the task exists but belongs to someone else.
             throw TaskNotFoundException.withId(taskId);
         }
 

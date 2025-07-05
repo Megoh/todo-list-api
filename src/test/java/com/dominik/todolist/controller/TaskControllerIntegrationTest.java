@@ -7,6 +7,7 @@ import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.repository.AppUserRepository;
 import com.dominik.todolist.repository.TaskRepository;
+import com.dominik.todolist.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +49,9 @@ public class TaskControllerIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private TaskService taskService;
 
     private AppUser userA;
     private AppUser userB;
@@ -124,6 +128,36 @@ public class TaskControllerIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Task should exist in the database"));
 
         assertTrue(deletedTask.isDeleted(), "Task's isDeleted flag should be true.");
+    }
+
+    @Test
+    @DisplayName("POST /api/tasks/{id}/restore - Success, Restores Own Soft-Deleted Task")
+    @WithMockUser("user.a@example.com")
+    void whenRestoreOwnTask_thenReturns200AndTaskIsActive() throws Exception {
+        final var task = taskRepository.save(
+                Task.builder()
+                        .title("A task to be restored")
+                        .description("...")
+                        .status(TaskStatus.TO_DO)
+                        .appUser(userA)
+                        .build()
+        );
+
+        taskService.deleteTask(task.getId());
+
+        assertTrue(taskRepository.findByIdEvenIfDeleted(task.getId()).orElseThrow().isDeleted(),
+                "Pre-condition failed: Task should be soft-deleted before restore.");
+
+        mockMvc.perform(post("/api/tasks/{id}/restore", task.getId())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(task.getId().intValue())))
+                .andExpect(jsonPath("$.title", is("A task to be restored")));
+
+        final var restoredTask = taskRepository.findById(task.getId())
+                .orElseThrow(() -> new AssertionError("Task should be findable after restore"));
+
+        assertFalse(restoredTask.isDeleted(), "Task's isDeleted flag should be false after restore.");
     }
 
     @Test
