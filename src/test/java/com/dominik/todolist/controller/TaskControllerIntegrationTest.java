@@ -7,7 +7,6 @@ import com.dominik.todolist.model.Task;
 import com.dominik.todolist.model.TaskStatus;
 import com.dominik.todolist.repository.AppUserRepository;
 import com.dominik.todolist.repository.TaskRepository;
-import com.dominik.todolist.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,9 +48,6 @@ public class TaskControllerIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private TaskService taskService;
 
     private AppUser userA;
     private AppUser userB;
@@ -143,7 +139,9 @@ public class TaskControllerIntegrationTest {
                         .build()
         );
 
-        taskService.deleteTask(task.getId());
+        mockMvc.perform(delete("/api/tasks/{id}", task.getId())
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
 
         assertTrue(taskRepository.findByIdEvenIfDeleted(task.getId()).orElseThrow().isDeleted(),
                 "Pre-condition failed: Task should be soft-deleted before restore.");
@@ -158,6 +156,27 @@ public class TaskControllerIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Task should be findable after restore"));
 
         assertFalse(restoredTask.isDeleted(), "Task's isDeleted flag should be false after restore.");
+    }
+
+    @Test
+    @DisplayName("POST /api/tasks/{id}/restore - Fails, Task Is Not Deleted")
+    @WithMockUser("user.a@example.com")
+    void whenRestoreActiveTask_thenReturns409Conflict() throws Exception {
+        final var activeTask = taskRepository.save(
+                Task.builder()
+                        .title("An active task")
+                        .description("This task is not deleted.")
+                        .status(TaskStatus.IN_PROGRESS)
+                        .appUser(userA)
+                        .isDeleted(false)
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/tasks/{id}/restore", activeTask.getId())
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("not deleted and cannot be restored")));
     }
 
     @Test

@@ -32,7 +32,10 @@ public class GlobalExceptionHandler {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
-                        FieldError::getDefaultMessage,
+                        fieldError -> {
+                            String message = fieldError.getDefaultMessage();
+                            return (message != null) ? message : "Validation failed: " + fieldError.getCode();
+                        },
                         (existingMessage, newMessage) -> existingMessage + "; " + newMessage
                 ));
         body.put("errors", fieldErrors);
@@ -71,5 +74,20 @@ public class GlobalExceptionHandler {
                 ex.getMessage());
 
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Object> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", ex.getMessage());
+
+        logger.warn("IllegalStateException: Request URI: {} - Message: {}",
+                request.getDescription(false).replace("uri=", ""),
+                ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 }

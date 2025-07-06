@@ -68,13 +68,13 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public TaskResponse getTaskByIdAndAppUser(Long taskId) {
-        final var task = getAndVerifyTaskOwner(taskId);
+        final var task = findActiveTaskAndVerifyOwner(taskId);
         return mapToTaskResponse(task);
     }
 
     @Transactional
     public TaskResponse updateTask(Long taskId, TaskRequest taskRequest) {
-        final var task = getAndVerifyTaskOwner(taskId);
+        final var task = findActiveTaskAndVerifyOwner(taskId);
 
         if (taskRequest.title() != null && !taskRequest.title().isBlank()) {
             task.setTitle(taskRequest.title());
@@ -93,7 +93,7 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(Long taskId) {
-        final var task = getAndVerifyTaskOwner(taskId);
+        final var task = findActiveTaskAndVerifyOwner(taskId);
         taskRepository.delete(task);
     }
 
@@ -107,7 +107,7 @@ public class TaskService {
     }
 
     private Task getAndVerifyDeletedTaskOwner(Long taskId) {
-        final var task = findTaskByIdAndVerifyOwner(taskId, true);
+        final var task = findAnyTaskAndVerifyOwner(taskId);
 
         if (!task.isDeleted()) {
             throw new IllegalStateException("Task with ID " + taskId + " is not deleted and cannot be restored.");
@@ -116,20 +116,25 @@ public class TaskService {
         return task;
     }
 
-    private Task getAndVerifyTaskOwner(Long taskId) {
-        return findTaskByIdAndVerifyOwner(taskId, false);
-    }
-
-    private Task findTaskByIdAndVerifyOwner(Long taskId, boolean includeDeleted) {
+    private Task findActiveTaskAndVerifyOwner(Long taskId) {
         final var user = authenticatedUserService.getAuthenticatedUser();
-
-        final var task = (includeDeleted ? taskRepository.findByIdEvenIfDeleted(taskId) : taskRepository.findById(taskId))
+        final var task = taskRepository.findById(taskId)
                 .orElseThrow(() -> TaskNotFoundException.withId(taskId));
 
         if (!task.getAppUser().getId().equals(user.getId())) {
             throw TaskNotFoundException.withId(taskId);
         }
+        return task;
+    }
 
+    private Task findAnyTaskAndVerifyOwner(Long taskId) {
+        final var user = authenticatedUserService.getAuthenticatedUser();
+        final var task = taskRepository.findByIdEvenIfDeleted(taskId)
+                .orElseThrow(() -> TaskNotFoundException.withId(taskId));
+
+        if (!task.getAppUser().getId().equals(user.getId())) {
+            throw TaskNotFoundException.withId(taskId);
+        }
         return task;
     }
 }

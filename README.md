@@ -259,11 +259,13 @@ Base Path: /api/tasks
 - **Description**: Marks a task as deleted (only your own). The task is not permanently removed and can be restored.
 - **Success Response**: 204 No Content
 - **Error Response**:
-    - 404 Not Found – Task doesn’t exist or isn’t yours.
+    - 404 Not Found – Task doesn’t exist or isn’t yours
+
 ### 5. Restore a Task
 - **Endpoint**: POST /api/tasks/{id}/restore
 - **Description**: Restores a previously soft-deleted task to an active state.
 - **Request Body**: None.
 - **Success Response (200 OK)**: Returns the restored Task object.
 - **Error Response**:
-    - 404 Not Found – Task doesn’t exist, isn’t yours, or is not in a deleted state.
+    - 404 Not Found – The task with the specified ID does not exist or does not belong to the authenticated user
+    - 409 Conflict – The task was found, but it is not in a deleted state and therefore cannot be restored.
