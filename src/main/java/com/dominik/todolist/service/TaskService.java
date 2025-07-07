@@ -3,6 +3,7 @@ package com.dominik.todolist.service;
 import com.dominik.todolist.dto.CreateTaskRequest;
 import com.dominik.todolist.dto.TaskRequest;
 import com.dominik.todolist.dto.TaskResponse;
+import com.dominik.todolist.exception.TaskConflictException;
 import com.dominik.todolist.exception.TaskNotFoundException;
 import com.dominik.todolist.exception.UserNotFoundException;
 import com.dominik.todolist.model.Task;
@@ -110,7 +111,7 @@ public class TaskService {
         final var task = findAnyTaskAndVerifyOwner(taskId);
 
         if (!task.isDeleted()) {
-            throw new IllegalStateException("Task with ID " + taskId + " is not deleted and cannot be restored.");
+            throw new TaskConflictException("Task with ID " + taskId + " is not deleted and cannot be restored.");
         }
 
         return task;

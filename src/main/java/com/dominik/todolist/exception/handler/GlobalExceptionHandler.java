@@ -1,5 +1,6 @@
 package com.dominik.todolist.exception.handler;
 
+import com.dominik.todolist.exception.TaskConflictException;
 import com.dominik.todolist.exception.UserNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,18 +77,34 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Object> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+    @ExceptionHandler(TaskConflictException.class)
+    public ResponseEntity<Object> handleTaskConflictException(TaskConflictException ex, WebRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", System.currentTimeMillis());
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflict");
         body.put("message", ex.getMessage());
 
-        logger.warn("IllegalStateException: Request URI: {} - Message: {}",
+        logger.warn("TaskConflictException: Request URI: {} - Message: {}",
                 request.getDescription(false).replace("uri=", ""),
                 ex.getMessage());
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Object> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "Internal Server Error");
+        body.put("message", "An unexpected internal error occurred: " + ex.getMessage());
+
+        logger.error("IllegalStateException: Request URI: {} - Message: {}",
+                request.getDescription(false).replace("uri=", ""),
+                ex.getMessage(),
+                ex);
+
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
