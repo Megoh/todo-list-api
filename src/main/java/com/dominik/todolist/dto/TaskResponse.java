@@ -3,7 +3,7 @@ package com.dominik.todolist.dto;
 import com.dominik.todolist.model.TaskStatus;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Builder
 public record TaskResponse(
@@ -11,8 +11,8 @@ public record TaskResponse(
         String title,
         String description,
         TaskStatus status,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt,
+        Instant createdAt,
+        Instant updatedAt,
         Long userId,
         String userEmail
 ) {

@@ -94,9 +94,13 @@ public class TaskControllerIntegrationTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(taskRequest)))
-                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.title", is("New Task Title")))
-                .andExpect(jsonPath("$.status", is("TO_DO")))
+                .andExpect(jsonPath("$.description", is("A description for the new task.")))
+                .andExpect(jsonPath("$.status", is(TaskStatus.TO_DO.name())))
+                .andExpect(jsonPath("$.createdAt", allOf(notNullValue(), endsWith("Z"))))
+                .andExpect(jsonPath("$.updatedAt", allOf(notNullValue(), endsWith("Z"))))
+                .andExpect(jsonPath("$.userId", notNullValue()))
                 .andExpect(jsonPath("$.userEmail", is("test.user@example.com")));
     }
 
