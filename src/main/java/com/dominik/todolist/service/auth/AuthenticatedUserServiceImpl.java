@@ -22,10 +22,18 @@ public class AuthenticatedUserServiceImpl implements AuthenticatedUserService {
             throw new IllegalStateException("User is not authenticated.");
         }
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
+        Object principal = authentication.getPrincipal();
+        String email;
+
+        if (principal instanceof UserDetails) {
+            email = ((UserDetails) principal).getUsername();
+        } else if (principal instanceof String) {
+            throw new IllegalStateException("Cannot get user details from an anonymous user principal.");
+        } else {
+            throw new IllegalStateException("Unexpected principal type: " + principal.getClass().getName());
+        }
 
         return appUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database."));
+                .orElseThrow(() -> new IllegalStateException("Authenticated user '" + email + "' not found in database."));
     }
 }

@@ -27,3 +27,5 @@ gradle-app.setting
 *.class
 /gradlew
 /gradlew.bat
+
+project_structure_powershell.txt

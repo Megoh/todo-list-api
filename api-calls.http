@@ -1,0 +1,44 @@
+### Krok A: Zarejestruj nowego użytkownika
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Dominik",
+  "email": "dominik@example.com",
+  "password": "password123"
+}
+
+### Krok B: Zaloguj się i AUTOMATYCZNIE zapisz token
+# @name loginRequest
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "dominik@example.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("jwt_token", client.response.body.token);
+    client.log("Token JWT został przechwycony i zapisany.");
+%}
+
+### Krok C: Stwórz nowe zadanie (używając zapisanego tokenu)
+POST http://localhost:8080/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{jwt_token}}
+
+{
+  "title": "Zautomatyzować token JWT",
+  "description": "Użyć zmiennych w kliencie HTTP."
+}
+
+### Krok D: Stwórz drugie zadanie (używając tego samego tokenu)
+POST http://localhost:8080/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{jwt_token}}
+
+{
+  "title": "Nauczyć się czegoś nowego",
+  "description": "Odkryć potęgę narzędzi w IDE."
+}

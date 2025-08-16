@@ -25,8 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -436,5 +435,38 @@ public class TaskControllerIntegrationTest {
                 .status(TaskStatus.TO_DO)
                 .appUser(user)
                 .build());
+    }
+
+    @Test
+    @DisplayName("GET /api/tasks/public - Should Return All Tasks Without Authentication")
+    void getPublicTasks_shouldReturnAllTasks() throws Exception {
+        AppUser user = AppUser.builder()
+                .name("Test User")
+                .email("test@example.com")
+                .password("password")
+                .build();
+        appUserRepository.save(user);
+
+        taskRepository.save(Task.builder()
+                .title("Public Task 1")
+                .description("...")
+                .status(TaskStatus.TO_DO)
+                .appUser(user)
+                .build());
+        taskRepository.save(Task.builder()
+                .title("Public Task 2")
+                .description("...")
+                .status(TaskStatus.DONE)
+                .appUser(user)
+                .build());
+
+        mockMvc.perform(get("/api/tasks/public"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].title").value("Public Task 1"))
+                .andExpect(jsonPath("$.content[1].title").value("Public Task 2"))
+                .andExpect(jsonPath("$.content[1].status").value("DONE"));
     }
 }
