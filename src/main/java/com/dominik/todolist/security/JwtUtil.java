@@ -144,7 +144,7 @@ public class JwtUtil {
     public Boolean isTokenStructureValid(String token) {
         try {
             extractAllClaims(token);
-            return !isTokenExpired(token); // Check expiration separately
+            return !isTokenExpired(token);
         } catch (JwtException | IllegalArgumentException e) {
             logger.warn("Token structure/signature/expiration validation failed: {}", e.getMessage());
             return false;
