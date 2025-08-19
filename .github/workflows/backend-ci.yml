@@ -10,6 +10,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ./backend/todo-list-api
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,6 +28,4 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build and test with Gradle
-        run: |
-          chmod +x ./gradlew
-          ./gradlew build
+        run: ./gradlew build
