@@ -25,7 +25,5 @@ gradle-app.setting
 
 # Ignore all .class files
 *.class
-/gradlew
-/gradlew.bat
 
 project_structure_powershell.txt
